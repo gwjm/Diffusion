@@ -20,6 +20,8 @@ class SimpleDiffusionEncoder(nn.Module):
         Params:
         x: torch.Tensor: Input image
         timestep: int: number of timesteps to step forward in the noising process
+
+        Adds noise sampled from the standard normal distribution to the image recursively
         """
         if timestep == 0:
             return x
