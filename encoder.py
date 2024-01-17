@@ -23,14 +23,17 @@ class SimpleDiffusionEncoder(nn.Module):
 
         Adds noise sampled from the standard normal distribution to the image recursively
         """
+        """ TODO:
+        Change this function to add random noise to only the image color channels, not the whole tensor
+        """
         if timestep == 0:
             return x
 
-        x *= torch.sqrt(torch.full((1, 1), 1.0 - self.beta))
+        x[0] *= torch.sqrt(torch.full((1, 1), 1.0 - self.beta))
         noise = torch.sqrt(torch.full((1, 1), self.beta)) * (
-            torch.normal(0, 1, size=[x.shape[0], x.shape[1], x.shape[2]]) / 256.0
+            torch.normal(0, 1, size=([x.shape[1], x.shape[2]])) / 256.0
         )
-        x += noise
+        x[0] += noise
 
         timestep -= 1
         if timestep == 0:
