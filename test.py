@@ -1,4 +1,4 @@
-from encoder import SimpleDiffusionEncoder
+from utils.encoder import SimpleDiffusionEncoder
 from torch import random
 import matplotlib.pyplot as plt
 from torchvision.io import read_image
