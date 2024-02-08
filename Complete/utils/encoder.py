@@ -1,6 +1,7 @@
 import torch.nn as nn
 import torch
-import numpy as np
+import torch.nn.functional as F
+import math
 
 """
 The goal of this is to understand how a diffusion encoder works
@@ -43,62 +44,44 @@ https://huggingface.co/blog/annotated-diffusion
 """
 
 
-class DiffusionEncoder(nn.Module):
-    def __init__(self, beta_schedule: torch.tensor, max_timesteps: int) -> None:
-        super(
-            DiffusionEncoder,
-        )
-        self.schedule = beta_schedule
-        self.max_timesteps = max_timesteps
-
-    def forward(self, x: torch.tensor, timestep: int) -> torch.Tensor:
-        pass
-
-    def linear_beta_schedule(
-        self, beta_start: torch.float, beta_end: torch.float, timesteps: int
-    ) -> torch.Tensor:
-        return torch.linspace(beta_start, beta_end, timesteps)
-
-    def quadratic_beta_schedule(
-        self, beta_start: torch.float, beta_end: torch.float, timesteps: int
-    ) -> torch.Tensor:
-        return torch.linspace(beta_start**0.5, beta_end**0.5, timesteps) ** 2
-
-    def sigmoid_beta_schedule(
-        self, beta_start: torch.float, beta_end: torch.float, timesteps: int
-    ) -> torch.Tensor:
-        betas = torch.linspace(beta_start, beta_end, timesteps)
-        return torch.sigmoid(betas) * (beta_end - beta_start) + beta_start
-
-    def cos_beta_schedule(
-        self,
-        beta_start: torch.float,
-        beta_end: torch.float,
-        timesteps: int,
-        s: torch.float = 0.008,
-    ) -> torch.Tensor:
-        pass
-
-    def set_beta_schedule(
-        self,
-        timesteps: int,
-        beta_start: torch.float = 0.0001,
-        beta_end: torch.float = 0.02,
-        schedule_type: str = "linear",
+class Q_Sampler(nn.Module):
+    def __init__(
+        self, beta_schedule: torch.tensor, max_timesteps: torch.tensor
     ) -> None:
-        self.max_timesteps = timesteps
-        schedule_type = schedule_type.lower()
-        if schedule_type is None or schedule_type == "linear":
-            self.schedule = self.linear_beta_schedule(beta_start, beta_end, timesteps)
-        elif schedule_type == "sigmoid":
-            self.schedule = self.sigmoid_beta_schedule(beta_start, beta_end, timesteps)
-        elif schedule_type == "quadratic":
-            self.schedule = self.quadratic_beta_schedule(
-                beta_start, beta_end, timesteps
-            )
-        elif schedule_type == "cosine":
-            self.schedule = self.cos_beta_schedule(beta_start, beta_end, timesteps)
-        else:
-            raise ValueError(
-                f"Schedule type {schedule_type} not supported. Please choose from linear, sigmoid, quadratic, or cosine."
-            )
+        super(
+            Q_Sampler,
+        )
+        self.beta_schedule = beta_schedule
+        self.max_timesteps = max_timesteps
+        self.alpha, self.alpha_complement = self.calculate_alphas()
+
+    def calculate_alphas(self) -> torch.Tensor:
+        """
+        This function will calculate the alphas for each timestep
+        both on the initialization of the encoder object and any time
+        the beta schedule is changed.
+        """
+        alphas = 1 - self.beta_schedule
+        alphas_cumprod = torch.cumprod(alphas, dim=0)
+        sqrt_cumprod = torch.sqrt(alphas_cumprod)
+        sqrt_cumprod_compliment = torch.sqrt(1.0 - alphas_cumprod)
+        return sqrt_cumprod, sqrt_cumprod_compliment
+
+    def forward(self, x: torch.tensor, timestep: torch.Tensor) -> torch.Tensor:
+        noise = torch.randn_like(x)
+        sqrt_alphas_cumprod_t = self.extract_alpha(self.alpha, timestep, x.shape)
+        sqrt_one_minus_alphas_cumprod_t = self.extract_alpha(
+            self.alpha_complement, timestep, x.shape
+        )
+
+        return (
+            sqrt_alphas_cumprod_t * x + sqrt_one_minus_alphas_cumprod_t * noise,
+            noise,
+        )
+
+    def extract_alpha(
+        self, alpha: torch.Tensor, timestep: torch.Tensor, x_shape: int
+    ) -> torch.Tensor:
+        batch_size = timestep.shape[0]
+        out = alpha.gather(-1, timestep.cpu().long())
+        return out.reshape(batch_size, *((1,) * (len(x_shape) - 1))).to(timestep.device)
