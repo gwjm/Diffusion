@@ -10,9 +10,23 @@ import torch.nn as nn
 
 class Model_Wrapper(nn.Module):
     def __init__(
-        self, beta_schedule: torch.Tensor, max_timesteps: torch.Tensor
+        self,
+        beta_schedule: torch.Tensor,
+        max_timesteps: torch.Tensor,
+        decoder: nn.Module,
     ) -> None:
+
+        # Define the Forward Process object
         self.Q = Q_Sampler(beta_schedule, max_timesteps)
+
+        # Define the U-Net
+        self.decoder = decoder
 
     def q_sample_image(self, image: torch.Tensor):
         return self.Q(image)
+
+    def forward(self, x):
+        pass
+
+    def sample_new_image(self):
+        pass

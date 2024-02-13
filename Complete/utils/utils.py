@@ -33,3 +33,4 @@ def cos_beta_schedule(
 ) -> torch.Tensor:
     betas = torch.linspace(beta_start, beta_end, timesteps)
     return torch.cos(betas * torch.pi / 2.0) ** 2
+
