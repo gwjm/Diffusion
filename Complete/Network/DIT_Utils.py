@@ -5,12 +5,32 @@ import math
 
 
 class PatchEmbed(nn.Module):
-    def __init__(self, patch_size: int) -> None:
+    def __init__(
+        self,
+        img_size: int,
+        patch_size: int,
+        in_channels: int,
+        embed_dim: int,
+        bias=True,
+    ) -> None:
         super(PatchEmbed, self).__init__()
-        pass
+        img_shape = (img_size, img_size)
+        patch_shape = (patch_size, patch_size)
+        self.img_shape = img_shape
+        self.patch_shape = patch_shape
+        self.grid_shape = (
+            img_shape[0] // patch_shape[0],
+            img_shape[1] // patch_shape[1],
+        )
+        self.num_patches = self.grid_shape[0] * self.grid_shape[1]
+        self.proj = nn.Conv2d(
+            in_channels, embed_dim, kernel_size=patch_size, stride=patch_size, bias=bias
+        )
 
     def forward(self, x: Tensor) -> Tensor:
-        pass
+        x = self.proj(x)
+        x = x.flatten(2).transpose(1, 2)
+        return x
 
 
 class TimestepEmbedder(nn.Module):
