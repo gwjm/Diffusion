@@ -1,4 +1,5 @@
 import torch
+import torch.nn as nn
 
 """
 Beta Schedule Generators
@@ -34,3 +35,23 @@ def cos_beta_schedule(
     betas = torch.linspace(beta_start, beta_end, timesteps)
     return torch.cos(betas * torch.pi / 2.0) ** 2
 
+
+"""
+Sinusoidal Positional Embeddings for time steps in the UNET
+
+"""
+
+
+class PositionEmbeddings(nn.Module):
+    def __init__(self, dim):
+        super().__init__()
+        self.dim = dim
+
+    def forward(self, time: torch.Tensor) -> torch.Tensor:
+        device = time.device
+        half_dim = self.dim // 2
+        embeddings = torch.log(10000) / (half_dim - 1)
+        embeddings = torch.exp(torch.arange(half_dim, device=device) * -embeddings)
+        embeddings = time[:, None] * embeddings[None, :]
+        embeddings = torch.cat((embeddings.sin(), embeddings.cos()), dim=-1)
+        return embeddings
