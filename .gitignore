@@ -1,3 +1,5 @@
 *.png
 *.jpeg 
 __pycache__
+test.py
+.vscode/settings.json
