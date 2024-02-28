@@ -10,7 +10,7 @@ class PatchEmbed(nn.Module):
         img_size: int,
         patch_size: int,
         in_channels: int,
-        embed_dim: int,
+        embedding_dim: int,
         bias=True,
     ) -> None:
         super(PatchEmbed, self).__init__()
@@ -24,7 +24,11 @@ class PatchEmbed(nn.Module):
         )
         self.num_patches = self.grid_shape[0] * self.grid_shape[1]
         self.proj = nn.Conv2d(
-            in_channels, embed_dim, kernel_size=patch_size, stride=patch_size, bias=bias
+            in_channels,
+            embedding_dim,
+            kernel_size=patch_size,
+            stride=patch_size,
+            bias=bias,
         )
 
     def forward(self, x: Tensor) -> Tensor:
@@ -74,3 +78,13 @@ class LabelEmbedder(nn.Module):
 
     def forward(self, x: Tensor) -> Tensor:
         return self.embedding_table(x)
+
+
+class PositionalEmbedding(nn.Module):
+    def __init__(self, num_patches, embedding_dim):
+        super(PositionalEmbedding, self).__init__()
+        self.embedding_table = nn.Embedding(num_patches, embedding_dim)
+
+    def forward(self, x):
+        _, T, _ = x.shape
+        return x + self.embedding_table(torch.arange(T))
