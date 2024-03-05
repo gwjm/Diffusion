@@ -78,13 +78,3 @@ class LabelEmbedder(nn.Module):
 
     def forward(self, x: Tensor) -> Tensor:
         return self.embedding_table(x)
-
-
-class PositionalEmbedding(nn.Module):
-    def __init__(self, num_patches, embedding_dim):
-        super(PositionalEmbedding, self).__init__()
-        self.embedding_table = nn.Embedding(num_patches, embedding_dim)
-
-    def forward(self, x):
-        _, T, _ = x.shape
-        return x + self.embedding_table(torch.arange(T))

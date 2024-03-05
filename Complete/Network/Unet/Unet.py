@@ -1,15 +1,22 @@
 import torch.nn as nn
 from Unet_utils import *
+from utils import SinusoidalPositionalEmbedding
 
 
 class U_Net(nn.Module):
     def __init__(
         self,
-        in_channels: int,
-        num_classes: int,
-        bilinear: bool = True,
-        hidden_dims: list = None,
-    ) -> None:
+        in_channels,
+        num_classes,
+        time_emb_dim,
+        bilinear=True,
+        hidden_dims=None,
+    ):
+        self.time_mlp = nn.Sequential(
+            SinusoidalPositionalEmbedding(time_emb_dim),
+            nn.Linear(time_emb_dim, time_emb_dim),
+            nn.Relu(),
+        )
         if hidden_dims:
             assert len(hidden_dims) % 2 == 0
         else:
@@ -29,18 +36,22 @@ class U_Net(nn.Module):
         self.n_classes = num_classes
         self.bilinear = bilinear
 
-        modules = []
-        modules.append(DoubleConv(in_channels, hidden_dims[0]))
+        self.conv1 = DoubleConv(in_channels, time_emb_dim, hidden_dims[0])
 
+        down_modules = []
         for i in range(0, len(hidden_dims) // 2):
-            modules.append(DownConv(hidden_dims[i], hidden_dims[i + 1]))
+            down_modules.append(
+                DownConv(hidden_dims[i], hidden_dims[i + 1], time_emb_dim)
+            )
 
+        up_modules = []
         for i in range(len(hidden_dims) // 2, len(hidden_dims)):
-            modules.append(UpConv(hidden_dims[i], hidden_dims[i + 1], bilinear))
+            up_modules.append(
+                UpConv(hidden_dims[i], hidden_dims[i + 1], time_emb_dim, bilinear)
+            )
 
-        modules.append(OutConv(hidden_dims[-1], num_classes))
+        self.Out = OutConv(hidden_dims[-1], num_classes)
 
-        self.Model = nn.Sequential(modules)
-
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        return self.Model(x)
+    def forward(self, x, timestep) -> torch.Tensor:
+        # TODO: Implement the forward pass with residual connections and timestep embeddings
+        pass
